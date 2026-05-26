@@ -1,0 +1,58 @@
+# =============================================================================
+# Project dependencies
+# =============================================================================
+# Python: tested with CPython 3.12. Versions 3.10-3.13 should also work,
+# but 3.12 is the reference interpreter for the case-study notebooks.
+#
+# Pinned to known-working version ranges. These versions are what the case
+# studies of the thesis were developed against; tighten or relax as needed
+# for your environment.
+#
+# Install all of them with:
+#   pip install -r requirements.txt
+#
+# Or, if you only want to run the parameter-shift path of the framework
+# (Case Study 2), install only the entries marked [PS] below — that path
+# is dependency-light and does not need Qibo or PyTorch.
+# -----------------------------------------------------------------------------
+
+# Numerics & data                                          [PS] [AD]
+numpy>=1.24,<3.0
+scipy>=1.10,<2.0
+
+# Classical ML baselines and metrics                       [PS] [AD]
+scikit-learn>=1.3,<2.0
+
+# Parallel experiment runner (Case Study 2 grid)           [PS]
+joblib>=1.3,<2.0
+
+# Plotting                                                 [PS] [AD]
+matplotlib>=3.7,<4.0
+plotly>=5.15,<7.0
+
+# Interactive widgets (Bloch slider in Notebook 1)              [AD]
+ipywidgets>=8.0,<9.0
+
+# Jupyter kernel and notebook UI                           [PS] [AD]
+jupyter>=1.0
+jupyterlab>=4.0
+
+# Quantum simulator + autodifferentiation                       [AD]
+# These are exercised ONLY by the Qibo+PyTorch path of Case Study 1 in
+# Notebook 1 (Cells 18, 20, and the AD training loops). Case Study 2
+# (the imbalance grid) does not import them.
+qibo>=0.2.6,<0.3
+qiboml>=0.0.1,<0.1
+torch>=2.1,<3.0
+
+# -----------------------------------------------------------------------------
+# Optional CUDA GPU support for the AD path
+# -----------------------------------------------------------------------------
+# If you want GPU acceleration for the autodifferentiation path of Case
+# Study 1, install a CUDA-enabled PyTorch build instead of the line above:
+#
+#   pip install torch --index-url https://download.pytorch.org/whl/cu130
+#
+# The parameter-shift path (Case Study 2) is CPU-only by design and does
+# not benefit from GPU acceleration: the per-circuit kernel is too small
+# for the dispatch overhead of GPU launches to be worth it.
