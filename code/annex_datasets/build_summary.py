@@ -95,8 +95,8 @@ for ds in res:
     md(
 """## 3. The four datasets
 
-Balanced base pool of each dataset (noise = 0.1), reproducing Fig. 12 of the
-paper."""),
+Balanced base pool of each dataset (noise = 0.1), reproducing the geometries of
+Appendix E.1 of the paper."""),
     code(
 """
 fig, axes = plt.subplots(1, len(DATASETS), figsize=(4.2 * len(DATASETS), 4.2))

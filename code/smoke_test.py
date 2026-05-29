@@ -111,8 +111,9 @@ print(f"  Classical: BA={res_c.metrics['balanced_accuracy']:.3f}  "
 assert res_c.metrics['balanced_accuracy'] > 0.5  # logreg should clearly beat trivial
 assert res_c.n_circuit_evals == 0  # classical models don't run circuits
 
-# Sanity: metric panel is BA + confusion-matrix counts, nothing else.
-expected_keys = {'balanced_accuracy', 'tn', 'fp', 'fn', 'tp', 'threshold'}
+# Sanity: metric panel is BA, the threshold-independent ROC AUC byproduct,
+# and the four confusion-matrix counts (plus the stored threshold).
+expected_keys = {'balanced_accuracy', 'roc_auc', 'tn', 'fp', 'fn', 'tp', 'threshold'}
 got_keys = set(res_c.metrics.keys())
 assert got_keys == expected_keys, (
     f"compute_metrics keys changed: expected {expected_keys}, got {got_keys}"

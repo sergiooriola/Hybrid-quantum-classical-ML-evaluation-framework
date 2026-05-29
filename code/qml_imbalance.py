@@ -40,10 +40,11 @@ training) and adds:
     tune_threshold(scores_val, y_val)
         Sweep a threshold that maximises balanced accuracy on validation.
     compute_metrics(y_true, scores, threshold) -> dict
-        Primary metric: balanced_accuracy.
-        Confusion-matrix counts (tn, fp, fn, tp) are also returned as
-        diagnostic free byproducts; they feed the failure-mode analysis
-        of Section 3.2 but do not enter the pre-registered verdict.
+        Primary metric: balanced_accuracy. The threshold-independent ROC AUC
+        and the four confusion-matrix counts (tn, fp, fn, tp) are also returned
+        as diagnostic free byproducts; they feed the failure-mode and
+        robustness analyses of Section 3.2 but do not enter the pre-registered
+        verdict.
 
     Experiment runner
     -----------------
@@ -249,7 +250,7 @@ class QuantumModel:
     """Uniform interface for the three quantum architectures.
 
     n_iter and lr default to the values used throughout the thesis
-    (Section 2.4 Module 3); override per experiment if needed.
+    (Section 2.2.5, Module 3); override per experiment if needed.
     """
 
     SPEC = {
@@ -258,7 +259,7 @@ class QuantumModel:
         'data_reuploading': dict(circuit_type='dr',        n_params=6),
     }
 
-    def __init__(self, name: str, n_iter: int = 150, lr: float = 0.015):
+    def __init__(self, name: str, n_iter: int = 200, lr: float = 0.015):
         if name not in self.SPEC:
             raise ValueError(f"unknown quantum model: {name}")
         self.name = name
@@ -397,7 +398,7 @@ def tune_threshold(scores_val: np.ndarray, y_val: np.ndarray,
     """Sweep a threshold over the score range; return (best_threshold, best_BA).
 
     The objective is balanced accuracy on the validation set (the only metric
-    the framework optimises against; see Section 2.4 Module 5). y_val must be
+    the framework optimises against; see Section 2.2.7, Module 5). y_val must be
     in {0, 1}.
     """
     s_min, s_max = float(np.min(scores_val)), float(np.max(scores_val))
@@ -419,7 +420,7 @@ def compute_metrics(y_true: np.ndarray, scores: np.ndarray, threshold: float
     """Headline metric (balanced accuracy) plus confusion-matrix counts and
     a threshold-independent ranking diagnostic (ROC AUC).
 
-    Balanced accuracy is the single primary metric of the thesis (Section 2.4
+    Balanced accuracy is the single primary metric of the thesis (Section 2.2.7,
     Module 5). The confusion-matrix counts (tn, fp, fn, tp) are retained as
     free byproducts that feed the failure-mode discussion of Section 3.2;
     they do not enter the pre-registered verdict.

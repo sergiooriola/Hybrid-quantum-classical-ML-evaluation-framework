@@ -97,8 +97,10 @@ The grid is **identical** to `code/run_experiments.py` (see `CONFIG` in
 | models        | 3 quantum + 5 classical (8)   |
 | runs/dataset  | 1 344                         |
 
-**Why 12 seeds.** The pairwise Wilcoxon + Holm certification needs `>= 12` seeds:
-with `k = 8` models the smallest Holm-adjusted p is `28 * 2/2^n`, which only
-drops below 0.05 at `n >= 11`. At 12 seeds the floor is `28 * 2/2^12 = 0.0137`,
-so the protocol can certify pairs -- which is what makes the cross-dataset
-quantum-advantage table in `summary.ipynb` meaningful.
+**Why 12 seeds.** The pairwise Wilcoxon + Holm certification needs enough seeds
+for its discrete-distribution floor to fall below 0.05: with `k = 8` models the
+smallest Holm-adjusted p is `28 * 2/2^n`, equal to `0.0547` at `n = 10` (just
+above 0.05) and `0.0137` at `n = 12`. The study fixes `n = 12` (matching the
+main study's pre-registered choice), so the protocol can certify pairs -- which
+is what makes the cross-dataset quantum-advantage table in `summary.ipynb`
+meaningful.
