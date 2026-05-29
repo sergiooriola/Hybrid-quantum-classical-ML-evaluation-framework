@@ -1,5 +1,7 @@
-# Personal thesis manuscript — not part of the public framework release
+# Personal manuscript — not part of the public release
 thesis/
+# Claude assistant files
+.claude/
 
 # Python
 __pycache__/

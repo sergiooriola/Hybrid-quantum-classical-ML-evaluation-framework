@@ -75,7 +75,8 @@ from sklearn.svm import SVC
 from sklearn.neural_network import MLPClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import balanced_accuracy_score, confusion_matrix
+from sklearn.metrics import (balanced_accuracy_score, confusion_matrix,
+                             roc_auc_score)
 
 # All the quantum/training primitives live in qml_core.
 from qml_core import (
@@ -415,17 +416,29 @@ def tune_threshold(scores_val: np.ndarray, y_val: np.ndarray,
 
 def compute_metrics(y_true: np.ndarray, scores: np.ndarray, threshold: float
                     ) -> Dict[str, float]:
-    """Headline metric (balanced accuracy) plus confusion-matrix counts.
+    """Headline metric (balanced accuracy) plus confusion-matrix counts and
+    a threshold-independent ranking diagnostic (ROC AUC).
 
     Balanced accuracy is the single primary metric of the thesis (Section 2.4
     Module 5). The confusion-matrix counts (tn, fp, fn, tp) are retained as
     free byproducts that feed the failure-mode discussion of Section 3.2;
     they do not enter the pre-registered verdict.
+
+    ROC AUC is computed on the *continuous* score (before thresholding) and is
+    likewise a free byproduct: it measures how well the model ranks positive
+    test points above negative ones, independently of any decision threshold.
+    It does not enter the pre-registered verdict either; it is reported in
+    Section 3.2 as a threshold-independent robustness check on the BA-based
+    conclusions (the threshold tuner is shown there to drive a large share of
+    the headline BA at extreme imbalance, so a metric that removes thresholding
+    from the picture is the natural control). The test set is always balanced,
+    so both classes are present and the AUC is always well defined.
     """
     preds = (scores >= threshold).astype(int)
     cm = confusion_matrix(y_true, preds, labels=[0, 1])
     return {
         'balanced_accuracy': balanced_accuracy_score(y_true, preds),
+        'roc_auc':            float(roc_auc_score(y_true, scores)),
         'tn': int(cm[0, 0]), 'fp': int(cm[0, 1]),
         'fn': int(cm[1, 0]), 'tp': int(cm[1, 1]),
         'threshold':          float(threshold),
@@ -506,14 +519,20 @@ def run_one(model, ratio: float, seed: int,
 # =============================================================================
 
 def aggregate(results: List[RunResult],
-              by: Tuple[str, ...] = ('model', 'ratio')
+              by: Tuple[str, ...] = ('model', 'ratio'),
+              metric: str = 'balanced_accuracy',
               ) -> List[Dict]:
-    """Group results by `by` and report BA mean/std over the seeds in each group.
+    """Group results by `by` and report mean/std of `metric` over the seeds.
 
-    Balanced accuracy is the only aggregated metric. The confusion-matrix
-    counts (tn/fp/fn/tp) are intentionally not aggregated here; they live
-    in the raw RunResults and are used by the failure-mode analysis on a
-    per-seed basis.
+    Balanced accuracy is the primary aggregated metric (the default). The
+    `metric` argument allows the same aggregation to run on the
+    threshold-independent ROC AUC byproduct ('roc_auc') for the robustness
+    check of Section 3.2. The aggregated columns are always named
+    ``balanced_accuracy_mean`` / ``balanced_accuracy_std`` regardless of the
+    metric requested, so that the plotting and table helpers downstream do not
+    need to branch on the metric name. The confusion-matrix counts
+    (tn/fp/fn/tp) are intentionally not aggregated here; they live in the raw
+    RunResults and are used by the failure-mode analysis on a per-seed basis.
     """
     groups: Dict[Tuple, List[RunResult]] = {}
     for r in results:
@@ -524,7 +543,7 @@ def aggregate(results: List[RunResult],
     for key, rs in sorted(groups.items()):
         row = dict(zip(by, key))
         row['n_seeds'] = len(rs)
-        vals = np.array([r.metrics['balanced_accuracy'] for r in rs], dtype=float)
+        vals = np.array([r.metrics[metric] for r in rs], dtype=float)
         vals = vals[~np.isnan(vals)]
         if len(vals) == 0:
             row['balanced_accuracy_mean'] = float('nan')
@@ -599,11 +618,15 @@ def friedman_wilcoxon_holm(
     *,
     ratio: Optional[float] = None,
     alpha: float = 0.05,
+    metric: str = 'balanced_accuracy',
 ) -> Dict:
     """Paired statistical comparison of models at a single imbalance level.
 
-    Balanced accuracy is the only metric used (consistent with the rest of
-    the framework).
+    Balanced accuracy is the primary metric (the default), consistent with the
+    rest of the framework. The `metric` argument allows the identical paired
+    protocol (Friedman omnibus + Holm-corrected pairwise Wilcoxon) to be run on
+    the threshold-independent ROC AUC byproduct ('roc_auc') as the robustness
+    check of Section 3.2; the AUC run does not enter the pre-registered verdict.
 
     Parameters
     ----------
@@ -614,6 +637,8 @@ def friedman_wilcoxon_holm(
         data and returns a dict keyed by ratio.
     alpha
         Significance level (default 0.05).
+    metric
+        Per-run metric key to compare ('balanced_accuracy' or 'roc_auc').
 
     Returns
     -------
@@ -636,7 +661,8 @@ def friedman_wilcoxon_holm(
     if ratio is None:
         all_ratios = sorted({r.ratio for r in results})
         return {
-            r: friedman_wilcoxon_holm(results, ratio=r, alpha=alpha)
+            r: friedman_wilcoxon_holm(results, ratio=r, alpha=alpha,
+                                      metric=metric)
             for r in all_ratios
         }
 
@@ -648,7 +674,7 @@ def friedman_wilcoxon_holm(
         for i, s in enumerate(seeds):
             sub = [r for r in at_ratio if r.model == m and r.seed == s]
             if sub:
-                matrix[i, j] = sub[0].metrics['balanced_accuracy']
+                matrix[i, j] = sub[0].metrics[metric]
 
     complete = ~np.any(np.isnan(matrix), axis=1)
     M = matrix[complete]
